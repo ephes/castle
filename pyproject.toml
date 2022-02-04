@@ -24,3 +24,6 @@ requires-python = ">=3.9"
 
 [project.urls]
 Home = "https://github.com/ephes/castle"
+
+[project.scripts]
+flit = "flit:main"
