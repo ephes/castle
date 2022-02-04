@@ -6,3 +6,6 @@ dist/
 
 # PyCharm
 .idea
+
+# python
+__pycache__
