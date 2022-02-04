@@ -189,9 +189,9 @@ class Podcast:
         self.set_feed(feed)
 
 
-def main(args):
-    print(args)
+def main():
+    print("in main..")
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
