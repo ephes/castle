@@ -1,0 +1,26 @@
+[build-system]
+requires = [
+    "flit_core >=3.2,<4",
+    "httpx >= 0.22",
+    "tqdm >= 4",
+    "feedparser >= 6",
+]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "castle"
+authors = [{name = "Jochen Wersdörfer", email = "jochen-castle@wersdoerfer.de"}]
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: MIT License"]
+dynamic = ["version", "description"]
+requires-python = ">=3.9"
+    [requires-extra]
+        test = [
+            "pytest >= 6",
+        ]
+        doc = [
+            "mkdocs >= 1.2",
+        ]
+
+[project.urls]
+Home = "https://github.com/ephes/castle"

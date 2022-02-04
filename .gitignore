@@ -1,0 +1,8 @@
+# virtualfish
+.venv
+
+# build
+dist/
+
+# PyCharm
+.idea
