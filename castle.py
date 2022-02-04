@@ -127,6 +127,7 @@ class FeedRepository:
         return feed
 
     def add(self, feed):
+        feed = feed.copy()
         episodes = feed.pop("episodes", [])
         feed |= {"updated": feed["updated"].isoformat()}  # datetime to json
         self.feed = feed
@@ -190,7 +191,16 @@ class Podcast:
 
 
 def main():
-    print("in main..")
+    help = """
+Please provide a feed url.
+    """
+    if len(sys.argv) <= 1:
+        print(help)
+        sys.exit(0)
+    feed_url = sys.argv[1]
+    print("feed_url: ", feed_url)
+    podcast = Podcast(feed_url)
+    print(podcast)
 
 
 if __name__ == "__main__":
