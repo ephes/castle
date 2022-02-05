@@ -3,32 +3,58 @@ Castle is a little podcast command line utility to show
 new episodes and download audio files.
 """
 
-import sys
 import json
-import httpx
-import feedparser
-
-from time import mktime
-from pathlib import Path
+import sys
 from datetime import datetime
-from operator import itemgetter, attrgetter
+from operator import attrgetter
+from pathlib import Path
+from time import mktime
 
-from tqdm import tqdm
+import feedparser
+import httpx
+import rich.progress
+import typer
 
 __version__ = "0.1"
+cli = typer.Typer()
 
 
 def download_with_progress(url, target_path):
+    """
+    Stolen from: https://www.python-httpx.org/advanced/
+    """
     with target_path.open("wb") as download_file:
         with httpx.stream("GET", url) as response:
             total = int(response.headers["Content-Length"])
 
-            with tqdm(total=total, unit_scale=True, unit_divisor=1024, unit="B") as progress:
-                num_bytes_downloaded = response.num_bytes_downloaded
+            with rich.progress.Progress(
+                "[progress.percentage]{task.percentage:>3.0f}%",
+                rich.progress.BarColumn(bar_width=None),
+                rich.progress.DownloadColumn(),
+                rich.progress.TransferSpeedColumn(),
+            ) as progress:
+                download_task = progress.add_task("Download", total=total)
                 for chunk in response.iter_bytes():
                     download_file.write(chunk)
-                    progress.update(response.num_bytes_downloaded - num_bytes_downloaded)
-                    num_bytes_downloaded = response.num_bytes_downloaded
+                    progress.update(
+                        download_task, completed=response.num_bytes_downloaded
+                    )
+
+
+# def download_with_progress(url, target_path):
+#     """
+#     Copied from
+#     """
+#     with target_path.open("wb") as download_file:
+#         with httpx.stream("GET", url) as response:
+#             total = int(response.headers["Content-Length"])
+#
+#             with tqdm(total=total, unit_scale=True, unit_divisor=1024, unit="B") as progress:
+#                 num_bytes_downloaded = response.num_bytes_downloaded
+#                 for chunk in response.iter_bytes():
+#                     download_file.write(chunk)
+#                     progress.update(response.num_bytes_downloaded - num_bytes_downloaded)
+#                     num_bytes_downloaded = response.num_bytes_downloaded
 
 
 class Episode:
@@ -40,7 +66,7 @@ class Episode:
 
     @classmethod
     def from_dict(cls, episode):
-        return cls(episode["guid"], episode["audio"], episode["published"], episode["title"])
+        return cls(*[episode[key] for key in ["guid", "audio", "published", "title"]])
 
     def __repr__(self):
         return f"{self.title}"
@@ -50,6 +76,9 @@ class Episode:
 
     def dict(self):
         return self.__dict__
+
+    def download(self):
+        download_with_progress(self.audio, Path(self.title.lower().replace(" ", "_")))
 
 
 class EpisodesRepository:
@@ -72,7 +101,10 @@ class EpisodesRepository:
             except json.JSONDecodeError:
                 pass
 
-        json_episodes = [e | {"published": datetime.fromisoformat(e["published"])} for e in json_episodes]
+        json_episodes = [
+            e | {"published": datetime.fromisoformat(e["published"])}
+            for e in json_episodes
+        ]
         episodes = []
         for json_episode in json_episodes:
             episodes.append(Episode.from_dict(json_episode))
@@ -146,17 +178,18 @@ class FeedFetcher:
     def parse_feed_entries(entries):
         episodes = []
         for entry in entries:
-            episodes.append(Episode(
-                entry.id,
-                entry.enclosures[0]["href"],
-                datetime.fromtimestamp(mktime(entry.published_parsed)),
-                entry.title,
-            ))
+            episodes.append(
+                Episode(
+                    entry.id,
+                    entry.enclosures[0]["href"],
+                    datetime.fromtimestamp(mktime(entry.published_parsed)),
+                    entry.title,
+                )
+            )
         episodes.sort(key=attrgetter("published"))
         return episodes
 
     def fetch(self):
-        feed = {}
         document = feedparser.parse(self.feed_url)
         return {
             "title": document["feed"]["title"],
@@ -190,6 +223,7 @@ class Podcast:
         self.set_feed(feed)
 
 
+@cli.command()
 def main():
     help = """
 Please provide a feed url.
@@ -201,7 +235,18 @@ Please provide a feed url.
     print("feed_url: ", feed_url)
     podcast = Podcast(feed_url)
     print(podcast)
+    try:
+        episode_index = int(sys.argv[2])
+        print(podcast.episodes[episode_index])
+        podcast.episodes[episode_index].download()
+    except IndexError:
+        pass
+
+
+@cli.command()
+def run():
+    print("command run!")
 
 
 if __name__ == "__main__":
-    main()
+    cli()
