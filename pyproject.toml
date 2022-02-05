@@ -26,4 +26,4 @@ requires-python = ">=3.9"
 Home = "https://github.com/ephes/castle"
 
 [project.scripts]
-castle = "castle:main"
+castle = "castle:cli"
