@@ -1,5 +1,6 @@
+feedparser
 flit
 httpx
-tqdm
-feedparser
+rich
 textual
+typer
