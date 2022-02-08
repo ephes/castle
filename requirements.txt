@@ -1,6 +1,0 @@
-feedparser
-flit
-httpx
-rich
-textual
-typer
