@@ -22,9 +22,10 @@ class FeedInDb(BaseModel):
 class EpisodeInDb(BaseModel):
     index: int
     guid: str
-    audio: str
+    audio_url: str
     published: datetime
     title: str
+    audio_file: str | None
 
     @property
     def pk(self):
@@ -122,7 +123,11 @@ class JsonRepository:
             ]
 
     def _write_models(self, locked):
-        self.path.parent.mkdir(exist_ok=True)
+        try:
+            self.path.parent.mkdir(exist_ok=True)
+        except AttributeError:
+            # LocalPath in tests
+            pass
         models = self.storage_model_list_type(__root__=list(locked.values()))
         with self.path.open("w") as f:
             f.write(models.json())
@@ -173,7 +178,7 @@ class FeedParserRepository:
             episodes.append(
                 {
                     "guid": entry.id,
-                    "audio": entry.enclosures[0]["href"],
+                    "audio_url": entry.enclosures[0]["href"],
                     "published": datetime.fromtimestamp(mktime(entry.published_parsed)),
                     "title": entry.title,
                 }

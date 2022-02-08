@@ -3,8 +3,6 @@ Castle is a little podcast command line utility to show
 new episodes and download audio files.
 """
 
-from .download import download_with_progress
-
 
 class Feed:
     def __init__(self, url, updated):
@@ -79,7 +77,7 @@ class Podcast:
     def get_audio_file_name(self, episode):
         details = {
             # FIXME proper suffix from path? Or take info about format from feed?
-            "file_format": episode.audio.split(".")[-1],
+            "file_format": episode.audio_url.split(".")[-1],
             "index": episode.index,
             "title": episode.title.lower().replace(" ", "_"),
         }
@@ -87,21 +85,35 @@ class Podcast:
 
 
 class Episode:
-    def __init__(self, podcast, index, guid, audio, published, title):
+    def __init__(
+        self,
+        *args,
+        index,
+        guid,
+        audio_url,
+        published,
+        title,
+        podcast=None,
+        audio_file=None,
+    ):
         self.podcast = podcast
         self.index = index
         self.guid = guid
-        self.audio = audio
+        self.audio_url = audio_url
         self.published = published
         self.title = title
+        self.audio_file = audio_file
 
     @classmethod
     def from_dict(cls, episode):
-        podcast = episode.get("podcast")
-        return cls(
-            podcast,
-            *[episode[key] for key in ["index", "guid", "audio", "published", "title"]],
-        )
+        return cls(**episode)
+
+        # podcast = episode.get("podcast")
+        # return cls(
+        #     podcast,
+        #     *[episode[key] for key in ["index", "guid", "audio", "published", "title"]],
+        #     audio_file_name=episode.get("audio_file_name")
+        # )
 
     def __repr__(self):
         return f"{self.title}"
@@ -110,23 +122,18 @@ class Episode:
         return self.__repr__()
 
     def __eq__(self, other):
-        return self.podcast == other.podcast and self.audio == other.audio
+        return self.podcast == other.podcast and self.audio_url == other.audio_url
 
     def dict(self):
         return {
             "index": self.index,
             "guid": self.guid,
-            "audio": self.audio,
+            "audio_url": self.audio_url,
             "published": self.published,
             "title": self.title,
+            "audio_file": self.audio_file,
         }
 
     @property
     def audio_file_name(self):
         return self.podcast.get_audio_file_name(self)
-
-    def download(self, base_dir):
-        print(self.podcast.get_base_dir(), self.audio_file_name)
-        download_with_progress(
-            self.audio, base_dir / self.podcast.get_base_dir() / self.audio_file_name
-        )

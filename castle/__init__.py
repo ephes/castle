@@ -6,6 +6,7 @@ new episodes and download audio files.
 import typer
 
 from .config import settings
+from .download import download_with_progress
 from .models import Episode, Podcast
 from .repository import EpisodeRepository, FeedParserRepository, PodcastRepository
 
@@ -112,8 +113,12 @@ def download(podcast: str, episode: str):
     if podcast is None:
         return
     episode = find_episode_by_identifier(podcast, episode)
-    episode.download(settings.root)
-    # FIXME readd to repo
+    target_path = (
+        settings.root / podcast.get_base_dir() / podcast.get_audio_file_name(episode)
+    )
+    download_with_progress(episode.audio_url, target_path)
+    episode.audio_file = target_path.name
+    EpisodeRepository(settings.root / podcast.directory).add(episode)
 
 
 if __name__ == "__main__":

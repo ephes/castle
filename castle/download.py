@@ -26,3 +26,4 @@ def download_with_progress(url, target_path):
                     progress.update(
                         download_task, completed=response.num_bytes_downloaded
                     )
+    return target_path
