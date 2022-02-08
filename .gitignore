@@ -12,3 +12,6 @@ __pycache__
 
 # podcast data
 podcasts
+
+# notebooks
+.ipynb_checkpoints
