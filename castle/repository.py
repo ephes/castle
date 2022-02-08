@@ -6,14 +6,12 @@ remote api, maybe fastAPI... hmm.
 """
 from datetime import datetime
 from operator import itemgetter
-from pathlib import Path
 from time import mktime
 
 import feedparser
-
 from pydantic import BaseModel, parse_file_as
 
-from .models import Podcast, Episode, Feed
+from .models import Episode, Feed, Podcast
 
 
 class FeedInDb(BaseModel):
@@ -28,11 +26,16 @@ class EpisodeInDb(BaseModel):
     published: datetime
     title: str
 
+    @property
+    def pk(self):
+        return self.guid
+
 
 class EpisodeListInDb(BaseModel):
     """
     Used to make a list of episodes serializable to json.
     """
+
     __root__: list[EpisodeInDb]
 
 
@@ -44,9 +47,12 @@ class PodcastInDb(BaseModel):
     is that we need to have a place to store audio files anyway, so
     we can use that for episodes metadata too.
     """
+
     feed: FeedInDb
     title: str
     episodes_count: int
+    file_name_pattern: str
+    directory: str | None
 
     @property
     def pk(self):
@@ -57,6 +63,7 @@ class PodcastListInDb(BaseModel):
     """
     Used to make a list of podcasts serializable to json.
     """
+
     __root__: list[PodcastInDb]
 
 
@@ -67,6 +74,7 @@ class JsonRepository:
     Use model.pk as primary key to be able to quickly locate models
     and maybe get/update/remove them.
     """
+
     _all = None
 
     def __init__(self, base_dir):
@@ -81,7 +89,10 @@ class JsonRepository:
         Fetch dict of pydantic models from json in self.path
         """
         try:
-            return {model.pk: model for model in parse_file_as(list[self.storage_model_type], self.path)}
+            return {
+                model.pk: model
+                for model in parse_file_as(list[self.storage_model_type], self.path)
+            }
         except FileNotFoundError:
             return {}
 
@@ -94,80 +105,67 @@ class JsonRepository:
             self._all = self._fetch_all()
         return self._all
 
-    def list(self):
+    def list(self, additional_attributes=None):
         """
         Just return a list of all stored models. Convert models from storage
         model type to domain model type.
         """
-        return [self.domain_model_type.from_dict(model.dict()) for model in self.all.values()]
+        if additional_attributes is None:
+            return [
+                self.domain_model_type.from_dict(model.dict())
+                for model in self.all.values()
+            ]
+        else:
+            return [
+                self.domain_model_type.from_dict(model.dict() | additional_attributes)
+                for model in self.all.values()
+            ]
+
+    def _write_models(self, locked):
+        self.path.parent.mkdir(exist_ok=True)
+        models = self.storage_model_list_type(__root__=list(locked.values()))
+        with self.path.open("w") as f:
+            f.write(models.json())
+
+    def add(self, model):
+        model_in_db = self.storage_model_type(**model.dict())
+        # To avoid race conditions implement proper locking of json file FIXME
+        locked = self._fetch_all()
+        locked[model_in_db.pk] = model_in_db
+        self._write_models(locked)
+
+    def add_list(self, models):
+        models_in_db = [self.storage_model_type(**model.dict()) for model in models]
+        # To avoid race conditions implement proper locking of json file FIXME
+        locked = self._fetch_all()
+        for model_in_db in models_in_db:
+            locked[model_in_db.pk] = model_in_db
+        self._write_models(locked)
 
 
 class EpisodeRepository(JsonRepository):
     """
     Store episodes metadata and audio files for a podcast.
     """
+
     name = "episodes.json"
-    storage_model_type = EpisodeListInDb
+    storage_model_type = EpisodeInDb
+    storage_model_list_type = EpisodeListInDb
     domain_model_type = Episode
-
-    def list(self):
-        """
-        Build domain episodes from stored list of episodes.
-        """
-        return [Episode.from_dict(episode.dict() | {"podcast": self.podcast}) for episode in self.all]
-
-    def add(self, episodes):
-        episodes = EpisodeListInDb(__root__=[EpisodeInDb(**episode.dict()) for episode in episodes])
-        self.path.parent.mkdir(exist_ok=True)
-        with self.path.open("w") as f:
-            f.write(episodes.json())
 
 
 class PodcastRepository(JsonRepository):
     name = "podcasts.json"
     storage_model_type = PodcastInDb
+    storage_model_list_type = PodcastListInDb
     domain_model_type = Podcast
-
-    @property
-    def path(self):
-        return Path(self.name)
-
-    def _fetch_all(self):
-        """
-        Fetch list of podcasts from json in self.path
-
-        Make it a dict to be able to look up podcasts by feed.
-        """
-        try:
-            return {p.feed.url: p for p in parse_file_as(list[PodcastInDb], self.path)}
-        except FileNotFoundError:
-            return {}
-
-    @property
-    def all(self):
-        """
-        Cache fetching all podcasts from file.
-        """
-        if self._all is None:
-            self._all = self._fetch_all()
-        return self._all
-
-    def list(self):
-        return [Podcast.from_dict(podcast.dict()) for podcast in self.all.values()]
-
-    def add(self, podcast):
-        # To avoid race conditions implement proper locking of json file FIXME
-        locked = self._fetch_all()
-        locked[podcast.feed.url] = PodcastInDb(**podcast.dict())
-        podcasts = PodcastListInDb(__root__=list(locked.values()))
-        with self.path.open("w") as f:
-            f.write(podcasts.json())
 
 
 class FeedParserRepository:
     """
     Fetch/parse feed data from http.
     """
+
     @staticmethod
     def parse_feed_entries(entries):
         episodes = []
@@ -186,14 +184,16 @@ class FeedParserRepository:
             episode["index"] = index
         return episodes
 
-    def get(self, url):
+    def get(self, url, directory, episode_name_pattern):
         """
         Fetch feed from http and parse/validate/build a podcast domain model.
         """
         document = feedparser.parse(url)
 
         # validate and build feed
-        feed_in_db = FeedInDb(url=url, updated=datetime.fromtimestamp(mktime(document["updated_parsed"])))
+        feed_in_db = FeedInDb(
+            url=url, updated=datetime.fromtimestamp(mktime(document["updated_parsed"]))
+        )
         feed = Feed.from_dict(feed_in_db.dict())
 
         # validate episodes
@@ -201,10 +201,19 @@ class FeedParserRepository:
         validated_episodes = [EpisodeInDb(**episode) for episode in episodes_from_feed]
 
         # validate and build podcast
-        podcast_in_db = PodcastInDb(feed=feed_in_db, title=document["feed"]["title"], episodes_count=len(validated_episodes))
+        podcast_in_db = PodcastInDb(
+            feed=feed_in_db,
+            title=document["feed"]["title"],
+            file_name_pattern=episode_name_pattern,
+            episodes_count=len(validated_episodes),
+            directory=directory,
+        )
         podcast = Podcast(feed, podcast_in_db.title, podcast_in_db.episodes_count)
 
         # validate and build episodes
-        episodes = [Episode.from_dict(episode.dict() | {"podcast": podcast}) for episode in validated_episodes]
+        episodes = [
+            Episode.from_dict(episode.dict() | {"podcast": podcast})
+            for episode in validated_episodes
+        ]
 
         return podcast, episodes

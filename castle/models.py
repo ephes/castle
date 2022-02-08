@@ -3,8 +3,6 @@ Castle is a little podcast command line utility to show
 new episodes and download audio files.
 """
 
-from pathlib import Path
-
 from .download import download_with_progress
 
 
@@ -23,24 +21,38 @@ class Feed:
             "updated": self.updated,
         }
 
+    def __eq__(self, other):
+        return self.url == other.url
+
 
 class Podcast:
-    def __init__(self,
-                 feed, title, episodes_count,
-                 file_name_pattern="{index}_{title}.{file_format}",
-                 directory=None
+    def __init__(
+        self,
+        feed,
+        title,
+        episodes_count,
+        file_name_pattern="{index}_{title}.{file_format}",
+        directory=None,
     ):
         self.feed = feed
         self.title = title
         self.file_name_pattern = file_name_pattern
         self.episodes_count = episodes_count
-        if directory is None:
-            self.directory = self.title.lower().replace(" ", "_")
+        self.directory = (
+            self.title.lower().replace(" ", "_") if directory is None else directory
+        )
 
     @classmethod
     def from_dict(cls, podcast):
         feed = Feed.from_dict(podcast["feed"])
-        return cls(feed, podcast["title"], podcast.get("episodes_count", 0), episodes=podcast.get("episodes"))
+        foo = cls(
+            feed,
+            podcast["title"],
+            podcast.get("episodes_count", 0),
+            file_name_pattern=podcast["file_name_pattern"],
+            directory=podcast.get("directory"),
+        )
+        return foo
 
     def dict(self):
         return {
@@ -56,6 +68,10 @@ class Podcast:
 
     def __str__(self):
         return self.__repr__()
+
+    def __eq__(self, other):
+        equal = self.feed == other.feed and self.title == other.title
+        return equal
 
     def get_base_dir(self):
         return self.title.lower().replace(" ", "_")
@@ -81,15 +97,20 @@ class Episode:
 
     @classmethod
     def from_dict(cls, episode):
-        print(episode)
-        print([episode[key] for key in ["podcast", "index", "guid", "audio", "published", "title"]])
-        return cls(*[episode[key] for key in ["podcast", "index", "guid", "audio", "published", "title"]])
+        podcast = episode.get("podcast")
+        return cls(
+            podcast,
+            *[episode[key] for key in ["index", "guid", "audio", "published", "title"]],
+        )
 
     def __repr__(self):
         return f"{self.title}"
 
     def __str__(self):
         return self.__repr__()
+
+    def __eq__(self, other):
+        return self.podcast == other.podcast and self.audio == other.audio
 
     def dict(self):
         return {
@@ -104,6 +125,8 @@ class Episode:
     def audio_file_name(self):
         return self.podcast.get_audio_file_name(self)
 
-    def download(self):
+    def download(self, base_dir):
         print(self.podcast.get_base_dir(), self.audio_file_name)
-        download_with_progress(self.audio, Path(self.podcast.get_base_dir()) / self.audio_file_name)
+        download_with_progress(
+            self.audio, base_dir / self.podcast.get_base_dir() / self.audio_file_name
+        )

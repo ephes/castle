@@ -5,12 +5,9 @@ new episodes and download audio files.
 
 import typer
 
-from pathlib import Path
-
 from .config import settings
-from .repository import PodcastRepository, FeedParserRepository, EpisodeRepository
-from .models import Feed, Podcast, Episode
-
+from .models import Episode, Podcast
+from .repository import EpisodeRepository, FeedParserRepository, PodcastRepository
 
 __all__ = ["subscribe", "list_all_podcasts", "list_all_episodes"]
 
@@ -19,23 +16,22 @@ cli = typer.Typer()
 
 
 def subscribe(
-        feed_url: str, name_pattern: str, podcast_dir: str | None,
-        fp_repo=FeedParserRepository(),
-        podcasts_repo=PodcastRepository(settings.root),
-    ) -> Podcast:
+    feed_url: str,
+    name_pattern: str,
+    podcast_dir: str | None,
+    fp_repo=FeedParserRepository(),
+    podcasts_repo=PodcastRepository(settings.root),
+) -> Podcast:
     """
     Subscribe to a podcast feed url.
     """
-    podcast, episodes = fp_repo.get(feed_url)
-
     # add fetched podcast metadata to repository
-    podcast.file_name_pattern = name_pattern
-    podcast.directory = podcast_dir
+    podcast, episodes = fp_repo.get(feed_url, podcast_dir, name_pattern)
     podcasts_repo.add(podcast)
 
     # add fetched episodes metadata to repository
-    episodes_repo = EpisodeRepository(Path(podcast.directory))
-    episodes_repo.add(episodes)
+    episodes_repo = EpisodeRepository(settings.root / podcast.directory)
+    episodes_repo.add_list(episodes)
     return podcast
 
 
@@ -50,8 +46,8 @@ def list_all_episodes(podcast) -> list[Episode]:
     """
     List all episodes for a podcast.
     """
-    episodes_repo = EpisodeRepository(podcast)
-    return episodes_repo.list()
+    episodes_repo = EpisodeRepository(settings.root / podcast.directory)
+    return episodes_repo.list(additional_attributes={"podcast": podcast})
 
 
 def find_podcast_by_identifier(identifier: str) -> Podcast | None:
@@ -76,20 +72,20 @@ def find_episode_by_identifier(podcast: Podcast, identifier: str) -> Episode | N
 
 @cli.command()
 def add(
-        feed_url: str,
-        name_pattern: str = typer.Option(
-            "{index}_{title}.{file_format}", help="Pattern to use for downloaded file names"
-        ),
-        podcasf_dir: str = typer.Option(
-            None, help="base directory for storing podcast episodes"
-        )
+    feed_url: str,
+    name_pattern: str = typer.Option(
+        "{index}_{title}.{file_format}", help="Pattern to use for downloaded file names"
+    ),
+    podcast_dir: str = typer.Option(
+        None, help="base directory for storing podcast episodes"
+    ),
 ):
     """
     Subscribe to podcast with given FEED_URL.
 
     You can specify a file name pattern for downloaded audio files with --name-pattern
     """
-    podcast = subscribe(feed_url, name_pattern, podcasf_dir)
+    podcast = subscribe(feed_url, name_pattern, podcast_dir)
     print(f"Podcast {podcast.title} added")
 
 
@@ -116,7 +112,7 @@ def download(podcast: str, episode: str):
     if podcast is None:
         return
     episode = find_episode_by_identifier(podcast, episode)
-    episode.download()
+    episode.download(settings.root)
     # FIXME readd to repo
 
 
