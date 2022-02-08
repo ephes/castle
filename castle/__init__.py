@@ -114,7 +114,7 @@ def download(podcast: str, episode: str):
         return
     episode = find_episode_by_identifier(podcast, episode)
     target_path = (
-        settings.root / podcast.get_base_dir() / podcast.get_audio_file_name(episode)
+        settings.root / podcast.directory / podcast.get_audio_file_name(episode)
     )
     download_with_progress(episode.audio_url, target_path)
     episode.audio_file = target_path.name

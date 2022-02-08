@@ -1,7 +1,7 @@
 """
 Repositories to store podcasts/episodes.
 
-Atm only uses json. But this could also be a sqlite or an
+Atm only uses json. But this could also be a sqlite or a
 remote api, maybe fastAPI... hmm.
 """
 from datetime import datetime
@@ -41,14 +41,6 @@ class EpisodeListInDb(BaseModel):
 
 
 class PodcastInDb(BaseModel):
-    """
-    The episodes attribute is omitted, because we use a different
-    repository for that. One reason is to keep the podcasts json
-    small and only fetch episodes when we need them. Another one
-    is that we need to have a place to store audio files anyway, so
-    we can use that for episodes metadata too.
-    """
-
     feed: FeedInDb
     title: str
     episodes_count: int
@@ -133,6 +125,7 @@ class JsonRepository:
             f.write(models.json())
 
     def add(self, model):
+        """Add a single model to the repository."""
         model_in_db = self.storage_model_type(**model.dict())
         # To avoid race conditions implement proper locking of json file FIXME
         locked = self._fetch_all()
@@ -140,6 +133,7 @@ class JsonRepository:
         self._write_models(locked)
 
     def add_list(self, models):
+        """Add a list of models to the repository."""
         models_in_db = [self.storage_model_type(**model.dict()) for model in models]
         # To avoid race conditions implement proper locking of json file FIXME
         locked = self._fetch_all()
@@ -160,6 +154,10 @@ class EpisodeRepository(JsonRepository):
 
 
 class PodcastRepository(JsonRepository):
+    """
+    Store podcasts metadata.
+    """
+
     name = "podcasts.json"
     storage_model_type = PodcastInDb
     storage_model_list_type = PodcastListInDb
@@ -173,6 +171,11 @@ class FeedParserRepository:
 
     @staticmethod
     def parse_feed_entries(entries):
+        """
+        Turn the entries attribute of a parsed podcast feed into dicts
+        which could then be validated by pydantic and turned into domain
+        models.
+        """
         episodes = []
         for entry in entries:
             episodes.append(

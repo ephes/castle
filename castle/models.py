@@ -1,10 +1,13 @@
 """
-Castle is a little podcast command line utility to show
-new episodes and download audio files.
+All the domain models for castle live here.
 """
 
 
 class Feed:
+    """
+    To be able to fetch a feed with feedparser, we need it's url.
+    """
+
     def __init__(self, *args, url, updated):
         self.url = url
         self.updated = updated
@@ -24,6 +27,16 @@ class Feed:
 
 
 class Podcast:
+    """
+    Podcasts have a feed that can be fetched. Attributes like
+    title or episodes_count are retrieved from the feed.
+
+    The file_name_pattern is settable and determines the naming
+    schema for the audio files of podcast episodes. Podcast episodes
+    live in a directory which is also settable. By default, it's
+    derived from the title.
+    """
+
     def __init__(
         self,
         *,
@@ -43,10 +56,12 @@ class Podcast:
 
     @classmethod
     def from_dict(cls, podcast):
+        """Construct a podcast from a dict."""
         feed = Feed.from_dict(podcast.pop("feed"))
         return cls(**podcast, feed=feed)
 
     def dict(self):
+        """Serialize a podcast to dict."""
         return {
             "title": self.title,
             "feed": self.feed.dict(),
@@ -65,10 +80,10 @@ class Podcast:
         equal = self.feed == other.feed and self.title == other.title
         return equal
 
-    def get_base_dir(self):
-        return self.title.lower().replace(" ", "_")
-
     def get_audio_file_name(self, episode):
+        """
+        Use the file_name_pattern to build a name for episodes audio files.
+        """
         details = {
             # FIXME proper suffix from path? Or take info about format from feed?
             "file_format": episode.audio_url.split(".")[-1],
@@ -79,6 +94,15 @@ class Podcast:
 
 
 class Episode:
+    """
+    Episodes belong to a podcast. They have an index, which we
+    calculate by ourselves. The guid, audio_url, published date
+    and title are attributes which we get from the feed.
+
+    We store a reference to downloaded audio files in the audio_file
+    attribute.
+    """
+
     def __init__(
         self,
         *,
@@ -100,6 +124,7 @@ class Episode:
 
     @classmethod
     def from_dict(cls, episode):
+        """Construct an episode from a dict."""
         return cls(**episode)
 
     def __repr__(self):
@@ -112,6 +137,7 @@ class Episode:
         return self.podcast == other.podcast and self.audio_url == other.audio_url
 
     def dict(self):
+        """Serialize an episode to dict."""
         return {
             "index": self.index,
             "guid": self.guid,

@@ -1,5 +1,5 @@
 """
-Just some helper functions for downloading urls etc.
+Just some helper functions for downloading audio urls etc.
 """
 
 import httpx
