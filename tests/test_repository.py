@@ -13,7 +13,7 @@ def feed():
 
 @pytest.fixture
 def podcast(feed):
-    return Podcast(feed, "Python Podcast", 3)
+    return Podcast(feed=feed, title="Python Podcast", episodes_count=3)
 
 
 def test_podcast_repository_add(podcast, tmpdir):

@@ -5,13 +5,13 @@ new episodes and download audio files.
 
 
 class Feed:
-    def __init__(self, url, updated):
+    def __init__(self, *args, url, updated):
         self.url = url
         self.updated = updated
 
     @classmethod
     def from_dict(cls, feed):
-        return cls(feed["url"], feed["updated"])
+        return cls(**feed)
 
     def dict(self):
         return {
@@ -26,6 +26,7 @@ class Feed:
 class Podcast:
     def __init__(
         self,
+        *,
         feed,
         title,
         episodes_count,
@@ -42,15 +43,8 @@ class Podcast:
 
     @classmethod
     def from_dict(cls, podcast):
-        feed = Feed.from_dict(podcast["feed"])
-        foo = cls(
-            feed,
-            podcast["title"],
-            podcast.get("episodes_count", 0),
-            file_name_pattern=podcast["file_name_pattern"],
-            directory=podcast.get("directory"),
-        )
-        return foo
+        feed = Feed.from_dict(podcast.pop("feed"))
+        return cls(**podcast, feed=feed)
 
     def dict(self):
         return {
@@ -87,7 +81,7 @@ class Podcast:
 class Episode:
     def __init__(
         self,
-        *args,
+        *,
         index,
         guid,
         audio_url,
@@ -107,13 +101,6 @@ class Episode:
     @classmethod
     def from_dict(cls, episode):
         return cls(**episode)
-
-        # podcast = episode.get("podcast")
-        # return cls(
-        #     podcast,
-        #     *[episode[key] for key in ["index", "guid", "audio", "published", "title"]],
-        #     audio_file_name=episode.get("audio_file_name")
-        # )
 
     def __repr__(self):
         return f"{self.title}"

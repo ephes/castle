@@ -11,7 +11,7 @@ from time import mktime
 import feedparser
 from pydantic import BaseModel, parse_file_as
 
-from .models import Episode, Feed, Podcast
+from .models import Episode, Podcast
 
 
 class FeedInDb(BaseModel):
@@ -199,7 +199,6 @@ class FeedParserRepository:
         feed_in_db = FeedInDb(
             url=url, updated=datetime.fromtimestamp(mktime(document["updated_parsed"]))
         )
-        feed = Feed.from_dict(feed_in_db.dict())
 
         # validate episodes
         episodes_from_feed = self.parse_feed_entries(document.entries)
@@ -213,7 +212,7 @@ class FeedParserRepository:
             episodes_count=len(validated_episodes),
             directory=directory,
         )
-        podcast = Podcast(feed, podcast_in_db.title, podcast_in_db.episodes_count)
+        podcast = Podcast.from_dict(podcast_in_db.dict())
 
         # validate and build episodes
         episodes = [
