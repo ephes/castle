@@ -12,7 +12,7 @@ from .repository import EpisodeRepository, FeedParserRepository, PodcastReposito
 
 __all__ = ["subscribe", "list_all_podcasts", "list_all_episodes"]
 
-__version__ = "0.1"
+__version__ = "0.11"
 cli = typer.Typer()
 
 
