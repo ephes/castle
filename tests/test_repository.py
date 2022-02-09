@@ -1,19 +1,4 @@
-from datetime import datetime
-
-import pytest
-
-from pdcst.models import Episode, Feed, Podcast
 from pdcst.repository import EpisodeRepository, PodcastRepository
-
-
-@pytest.fixture
-def feed():
-    return Feed(url="https://example.com/rss.xml", updated=datetime.utcnow())
-
-
-@pytest.fixture
-def podcast(feed):
-    return Podcast(feed=feed, title="Python Podcast", episodes_count=3)
 
 
 def test_podcast_repository_add(podcast, tmpdir):
@@ -24,19 +9,6 @@ def test_podcast_repository_add(podcast, tmpdir):
         podcast_from_repo == podcast
         and podcast_from_repo.feed.updated == podcast.feed.updated
     )
-
-
-@pytest.fixture
-def episode(podcast):
-    attributes = {
-        "podcast": podcast,
-        "index": 0,
-        "audio_url": "https://d2mmy4gxasde9x.cloudfront.net/cast_audio/pp38_refactoring.mp3",
-        "guid": "dfd60a58-8bd3-4fe2-8dab-87f55093a0c7",
-        "published": datetime.utcnow(),
-        "title": "Refactoring",
-    }
-    return Episode.from_dict(attributes)
 
 
 def test_episode_repository_add(episode, tmpdir):
