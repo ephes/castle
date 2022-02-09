@@ -2,8 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from castle.models import Episode, Feed, Podcast
-from castle.repository import EpisodeRepository, PodcastRepository
+from pdcst.models import Episode, Feed, Podcast
+from pdcst.repository import EpisodeRepository, PodcastRepository
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
 """
-Castle is a little podcast command line utility to show
+pdcst is a little podcast command line utility to show
 new episodes and download audio files.
 """
 
