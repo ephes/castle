@@ -43,7 +43,7 @@ class Podcast:
         feed,
         title,
         episodes_count,
-        file_name_pattern="{index}_{title}.{file_format}",
+        file_name_pattern="{index:03}_{title}.{file_format}",
         directory=None,
     ):
         self.feed = feed
@@ -59,6 +59,11 @@ class Podcast:
         """Construct a podcast from a dict."""
         feed = Feed.from_dict(podcast.pop("feed"))
         return cls(**podcast, feed=feed)
+
+    @staticmethod
+    def title_for_filename(title: str) -> str:
+        """Remove characters that could cause problems in file names."""
+        return title.lower().replace(" ", "_").replace("?", "").replace(",", "")
 
     def dict(self):
         """Serialize a podcast to dict."""
@@ -88,7 +93,7 @@ class Podcast:
             # FIXME proper suffix from path? Or take info about format from feed?
             "file_format": episode.audio_url.split(".")[-1],
             "index": episode.index,
-            "title": episode.title.lower().replace(" ", "_"),
+            "title": self.title_for_filename(episode.title)
         }
         return self.file_name_pattern.format(**details)
 
