@@ -46,7 +46,10 @@ class Podcast:
         file_name_pattern="{index:03}_{title}.{file_format}",
         directory=None,
     ):
-        self.feed = feed
+        if isinstance(feed, Feed):
+            self.feed = feed
+        else:
+            self.feed = Feed.from_dict(feed)
         self.title = title
         self.file_name_pattern = file_name_pattern
         self.episodes_count = episodes_count
@@ -57,8 +60,9 @@ class Podcast:
     @classmethod
     def from_dict(cls, podcast):
         """Construct a podcast from a dict."""
-        feed = Feed.from_dict(podcast.pop("feed"))
-        return cls(**podcast, feed=feed)
+        # feed = Feed.from_dict(podcast.pop("feed"))
+        # feed = Feed.from_dict(podcast["feed"])
+        return cls(**podcast)
 
     @staticmethod
     def title_for_filename(title: str) -> str:
