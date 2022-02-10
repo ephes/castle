@@ -14,7 +14,6 @@ $ pipx install pdcst
 ## help
 
 ```shell
-$ pdcst --help
 Usage: pdcst [OPTIONS] COMMAND [ARGS]...
 
 Options:
@@ -28,9 +27,9 @@ Options:
 
 Commands:
   add       Subscribe to podcast with given FEED_URL.
-  download
-  episodes
-  podcasts
+  download  Download a podcast episode.
+  episodes  List the available episodes for a podcast.
+  podcasts  List your podcast subscriptions.
 ```
 
 ## Subsribe
