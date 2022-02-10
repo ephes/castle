@@ -92,6 +92,9 @@ def add(
 
 @cli.command(name="podcasts")
 def list_podcasts():
+    """
+    List your podcast subscriptions.
+    """
     all_podcasts = list_all_podcasts()
     for podcast in all_podcasts:
         print(podcast)
@@ -99,6 +102,11 @@ def list_podcasts():
 
 @cli.command(name="episodes")
 def list_episodes(identifier: str):
+    """
+    List the available episodes for a podcast.
+
+    pdcst episodes python
+    """
     podcast = find_podcast_by_identifier(identifier)
     if podcast is None:
         return
@@ -109,6 +117,11 @@ def list_episodes(identifier: str):
 
 @cli.command()
 def download(podcast: str, episode: str):
+    """
+    Download a podcast episode.
+
+    pdcst download python htmx
+    """
     podcast = find_podcast_by_identifier(podcast)
     if podcast is None:
         return
